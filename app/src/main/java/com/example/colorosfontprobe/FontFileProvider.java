@@ -18,15 +18,13 @@ public class FontFileProvider extends ContentProvider {
         if (!f.exists()) throw new FileNotFoundException("No selected font");
         return f;
     }
-    private Context requireContext() {
-        Context c = getContext();
-        if (c == null) throw new IllegalStateException("No context");
-        return c;
-    }
+
     @Override public String getType(Uri uri) { return "font/ttf"; }
+
     @Override public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
         return ParcelFileDescriptor.open(getFont(), ParcelFileDescriptor.MODE_READ_ONLY);
     }
+
     @Override public Cursor query(Uri uri, String[] p, String s, String[] a, String sort) {
         MatrixCursor c = new MatrixCursor(new String[]{OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE});
         try {
@@ -35,6 +33,7 @@ public class FontFileProvider extends ContentProvider {
         } catch (Exception ignored) {}
         return c;
     }
+
     @Override public int delete(Uri u,String s,String[] a){return 0;}
     @Override public int update(Uri u,ContentValues v,String s,String[] a){return 0;}
     @Override public Uri insert(Uri u,ContentValues v){return null;}

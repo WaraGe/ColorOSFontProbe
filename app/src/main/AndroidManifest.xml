@@ -1,21 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
-    <application
-        android:allowBackup="false"
-        android:label="ColorOS Font Probe"
-        android:theme="@style/AppTheme">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+    <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="ColorOS Font Changer">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <provider
-            android:name=".FontFileProvider"
-            android:authorities="com.example.colorosfontprobe.fonts"
-            android:exported="true"
-            android:grantUriPermissions="true" />
     </application>
 </manifest>

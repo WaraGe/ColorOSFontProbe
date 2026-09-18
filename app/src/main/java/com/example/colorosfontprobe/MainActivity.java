@@ -1,4 +1,44 @@
 package com.example.colorosfontprobe;
+
+import android.app.*;
+import android.os.*;
+import android.content.*;
+import android.content.pm.ProviderInfo;
+import android.database.Cursor;
+import android.graphics.Typeface;
+import android.net.Uri;
+import android.widget.*;
+import java.io.*;
+import java.util.*;
+
+public class MainActivity extends Activity {
+    static final int PICK=100;
+    TextView log, preview;
+    File fontFile;
+
+    final String[] AUTHORITIES = {
+        "theme",
+        "themestore",
+        "theme_individuation",
+        "theme_individuation_panel",
+        "com.oplus.themestore.basic.feature.individuationprovider",
+        "com.oplus.themestore.epona"
+    };
+    final String[] PATHS = {"", "font", "fonts", "theme", "themes", "current", "local", "download"};
+
+    @Override public void onCreate(Bundle b) {
+        super.onCreate(b);
+        fontFile=new File(getFilesDir(),"probe-font.ttf");
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL);
+        int p=dp(18); box.setPadding(p,p,p,p);
+
+        TextView title=new TextView(this); title.setText("ColorOS Font Provider Probe 0.5"); title.setTextSize(24); box.addView(title);
+        TextView info=new TextView(this);
+        info.setText("ColorOS ThemeStore Provider를 직접 검사하는 마지막 진단판입니다.\nDB를 쓰거나 삭제하지 않고, 접근 가능한 폰트/테마 URI와 컬럼을 찾습니다.");
+        box.addView(info);
+
+        preview=new TextView(this); preview.setText("가나다라마바사 ABCDEFG 1234567890"); preview.setTextSize(24); preview.setPadding(0,p,0,p); box.addView(preview);
+
         Button pick=btn("1. TTF / OTF 선택"); pick.setOnClickListener(v->pick()); box.addView(pick);
         Button scan=btn("2. Provider 전체 자동 검사"); scan.setOnClickListener(v->scanAll()); box.addView(scan);
         Button copy=btn("3. 로그 복사"); copy.setOnClickListener(v->copy()); box.addView(copy);
@@ -50,47 +90,3 @@ package com.example.colorosfontprobe;
                 out("provider="+pi.packageName+"/"+pi.name);
                 out("exported="+pi.exported+" readPerm="+pi.readPermission+" writePerm="+pi.writePermission);
             }
-        }catch(Throwable t){out("resolve ERROR "+shortErr(t));}
-
-        for(String path:PATHS){
-            Uri u=Uri.parse("content://"+authority+(path.length()==0?"":"/"+path));
-            query(u);
-        }
-    }
-
-    void query(Uri u){
-        Cursor c=null;
-        try{
-            c=getContentResolver().query(u,null,null,null,null);
-            if(c==null){out("NULL "+u); return;}
-            String[] cols=c.getColumnNames();
-            out("SUCCESS "+u+" rows="+c.getCount()+" columns="+Arrays.toString(cols));
-            int shown=0;
-            while(c.moveToNext() && shown<3){
-                StringBuilder sb=new StringBuilder(" row"+shown+": ");
-                for(int i=0;i<cols.length;i++){
-                    if(i>0)sb.append(" | ");
-                    sb.append(cols[i]).append("=");
-                    try{
-                        String v=c.getString(i);
-                        if(v!=null && v.length()>160)v=v.substring(0,160)+"...";
-                        sb.append(v);
-                    }catch(Throwable x){sb.append("<").append(c.getType(i)).append(">");}
-                }
-                out(sb.toString()); shown++;
-            }
-        }catch(Throwable t){out("FAIL "+u+" -> "+shortErr(t));}
-        finally{if(c!=null)c.close();}
-    }
-
-    String shortErr(Throwable t){
-        String s=t.getClass().getSimpleName()+": "+t.getMessage();
-        return s.replace('\n',' ');
-    }
-
-    void copy(){
-        ClipboardManager cm=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-        cm.setPrimaryClip(ClipData.newPlainText("ColorOS Font Provider Probe",log.getText()));
-        Toast.makeText(this,"로그 복사됨",Toast.LENGTH_SHORT).show();
-    }
-}

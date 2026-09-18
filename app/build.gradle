@@ -1,13 +1,12 @@
 plugins { id 'com.android.application' }
-
 android {
-    namespace 'com.example.colorosfontchanger'
-    compileSdk 36
-    defaultConfig {
-        applicationId 'com.example.colorosfontchanger'
-        minSdk 30
-        targetSdk 36
-        versionCode 1
-        versionName '0.4'
-    }
+ namespace 'com.example.colorosfontprobe'
+ compileSdk 36
+ defaultConfig {
+  applicationId 'com.example.colorosfontprobe'
+  minSdk 30
+  targetSdk 36
+  versionCode 6
+  versionName '0.6-final'
+ }
 }

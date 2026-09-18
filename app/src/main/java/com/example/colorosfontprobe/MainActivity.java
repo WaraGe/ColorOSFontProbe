@@ -12,125 +12,64 @@ import java.io.*;
 import java.util.*;
 
 public class MainActivity extends Activity {
-    static final int PICK=100;
-    TextView log, preview;
-    File fontFile;
+ static final int PICK=7;
+ TextView log,preview; File font;
+ final String[] A={"theme","themestore","theme_individuation","theme_individuation_panel",
+ "com.oplus.themestore.basic.feature.individuationprovider","com.oplus.themestore.epona"};
+ final String[] P={"","font","fonts","theme","themes","current","local","download","individuation","setting","settings"};
 
-    final String[] AUTHORITIES = {
-        "theme",
-        "themestore",
-        "theme_individuation",
-        "theme_individuation_panel",
-        "com.oplus.themestore.basic.feature.individuationprovider",
-        "com.oplus.themestore.epona"
-    };
-    final String[] PATHS = {"", "font", "fonts", "theme", "themes", "current", "local", "download"};
-
-    @Override public void onCreate(Bundle b) {
-        super.onCreate(b);
-        fontFile=new File(getFilesDir(),"probe-font.ttf");
-        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL);
-        int p=dp(18); box.setPadding(p,p,p,p);
-
-        TextView title=new TextView(this); title.setText("ColorOS Font Provider Probe 0.5"); title.setTextSize(24); box.addView(title);
-        TextView info=new TextView(this);
-        info.setText("ColorOS ThemeStore Provider를 직접 검사하는 마지막 진단판입니다.\nDB를 쓰거나 삭제하지 않고, 접근 가능한 폰트/테마 URI와 컬럼을 찾습니다.");
-        box.addView(info);
-
-        preview=new TextView(this); preview.setText("가나다라마바사 ABCDEFG 1234567890"); preview.setTextSize(24); preview.setPadding(0,p,0,p); box.addView(preview);
-
-        Button pick=btn("1. TTF / OTF 선택"); pick.setOnClickListener(v->pick()); box.addView(pick);
-        Button scan=btn("2. Provider 전체 자동 검사"); scan.setOnClickListener(v->scanAll()); box.addView(scan);
-        Button copy=btn("3. 로그 복사"); copy.setOnClickListener(v->copy()); box.addView(copy);
-        Button clear=btn("로그 지우기"); clear.setOnClickListener(v->log.setText("")); box.addView(clear);
-
-        log=new TextView(this); log.setTextSize(11); log.setTextIsSelectable(true); log.setPadding(0,p,0,p*2); box.addView(log);
-        ScrollView s=new ScrollView(this); s.addView(box); setContentView(s);
-        out("Device="+Build.MANUFACTURER+" "+Build.MODEL+" Android="+Build.VERSION.RELEASE+" SDK="+Build.VERSION.SDK_INT);
-        if(fontFile.exists()) loadPreview();
-    }
-
-    Button btn(String s){ Button b=new Button(this); b.setText(s); return b; }
-    int dp(int v){ return (int)(v*getResources().getDisplayMetrics().density+.5f); }
-    void out(String s){ log.append(s+"\n"); }
-
-    void pick(){
-        Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("*/*");
-        i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"font/ttf","font/otf","application/x-font-ttf","application/x-font-opentype","application/octet-stream"});
-        startActivityForResult(i,PICK);
-    }
-
-    @Override protected void onActivityResult(int r,int c,Intent data){
-        super.onActivityResult(r,c,data);
-        if(r!=PICK||c!=RESULT_OK||data==null||data.getData()==null)return;
-        try(InputStream in=getContentResolver().openInputStream(data.getData()); OutputStream os=new FileOutputStream(fontFile)){
-            byte[] buf=new byte[65536]; int n; while((n=in.read(buf))>0) os.write(buf,0,n);
-            loadPreview(); out("FONT selected size="+fontFile.length()+" path="+fontFile.getAbsolutePath());
-        }catch(Throwable t){out("FONT ERROR "+t);}
-    }
-
-    void loadPreview(){
-        try{preview.setTypeface(Typeface.createFromFile(fontFile));}catch(Throwable t){out("PREVIEW ERROR "+t);}
-    }
-
-    void scanAll(){
-        out("\n========== PROVIDER SCAN ==========");
-        for(String authority:AUTHORITIES) inspectAuthority(authority);
-        out("========== END ==========");
-        out("중요: SUCCESS가 나온 URI와 columns/row 내용을 그대로 보내주세요.");
-    }
-
-    void inspectAuthority(String authority){
-        out("\n--- authority: "+authority+" ---");
-        try{
-            ProviderInfo pi=getPackageManager().resolveContentProvider(authority,0);
-            if(pi==null){ out("resolveContentProvider = NONE"); }
-            else {
-                out("provider="+pi.packageName+"/"+pi.name);
-                out("exported="+pi.exported+" readPerm="+pi.readPermission+" writePerm="+pi.writePermission);
-            }
-        }catch(Throwable t){out("resolve ERROR "+shortErr(t));}
-
-        for(String path:PATHS){
-            Uri u=Uri.parse("content://"+authority+(path.length()==0?"":"/"+path));
-            query(u);
-        }
-    }
-
-    void query(Uri u){
-        Cursor c=null;
-        try{
-            c=getContentResolver().query(u,null,null,null,null);
-            if(c==null){out("NULL "+u); return;}
-            String[] cols=c.getColumnNames();
-            out("SUCCESS "+u+" rows="+c.getCount()+" columns="+Arrays.toString(cols));
-            int shown=0;
-            while(c.moveToNext() && shown<3){
-                StringBuilder sb=new StringBuilder(" row"+shown+": ");
-                for(int i=0;i<cols.length;i++){
-                    if(i>0)sb.append(" | ");
-                    sb.append(cols[i]).append("=");
-                    try{
-                        String v=c.getString(i);
-                        if(v!=null && v.length()>160)v=v.substring(0,160)+"...";
-                        sb.append(v);
-                    }catch(Throwable x){sb.append("<").append(c.getType(i)).append(">");}
-                }
-                out(sb.toString()); shown++;
-            }
-        }catch(Throwable t){out("FAIL "+u+" -> "+shortErr(t));}
-        finally{if(c!=null)c.close();}
-    }
-
-    String shortErr(Throwable t){
-        String s=t.getClass().getSimpleName()+": "+t.getMessage();
-        return s.replace('\n',' ');
-    }
-
-    void copy(){
-        ClipboardManager cm=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-        cm.setPrimaryClip(ClipData.newPlainText("ColorOS Font Provider Probe",log.getText()));
-        Toast.makeText(this,"로그 복사됨",Toast.LENGTH_SHORT).show();
-    }
+ public void onCreate(Bundle b){
+  super.onCreate(b); font=new File(getFilesDir(),"probe-font.ttf");
+  LinearLayout l=new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); l.setPadding(24,24,24,24);
+  TextView t=new TextView(this);t.setText("ColorOS Font Probe 0.6 FINAL");t.setTextSize(24);l.addView(t);
+  preview=new TextView(this);preview.setText("가나다라마바사 ABC 123");preview.setTextSize(26);preview.setPadding(0,24,0,24);l.addView(preview);
+  Button p=btn("1. TTF / OTF 선택");p.setOnClickListener(v->pick());l.addView(p);
+  Button s=btn("2. ColorOS Provider 자동 검사");s.setOnClickListener(v->scan());l.addView(s);
+  Button c=btn("3. 전체 로그 복사");c.setOnClickListener(v->copy());l.addView(c);
+  log=new TextView(this);log.setTextIsSelectable(true);log.setTextSize(11);l.addView(log);
+  ScrollView sv=new ScrollView(this);sv.addView(l);setContentView(sv);
+  o("Device="+Build.MANUFACTURER+" "+Build.MODEL+" Android="+Build.VERSION.RELEASE+" SDK="+Build.VERSION.SDK_INT);
+  o("이 빌드는 실제 ColorOS ThemeStore Provider 경로를 자동 탐색합니다.");
+ }
+ Button btn(String x){Button b=new Button(this);b.setText(x);return b;}
+ void o(String x){log.append(x+"\n");}
+ void pick(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");startActivityForResult(i,PICK);}
+ protected void onActivityResult(int r,int c,Intent d){super.onActivityResult(r,c,d);if(r!=PICK||c!=RESULT_OK||d==null)return;
+  try(InputStream in=getContentResolver().openInputStream(d.getData());OutputStream out=new FileOutputStream(font)){
+   byte[] q=new byte[65536];int n;while((n=in.read(q))>0)out.write(q,0,n);
+   preview.setTypeface(Typeface.createFromFile(font));o("FONT OK size="+font.length());
+  }catch(Throwable e){o("FONT FAIL "+e);}
+ }
+ void scan(){
+  o("\n========== SCAN ==========");
+  for(String a:A){
+   o("\nAUTHORITY "+a);
+   try{
+    ProviderInfo pi=getPackageManager().resolveContentProvider(a,0);
+    if(pi==null)o("RESOLVE NONE");
+    else o("PROVIDER "+pi.packageName+"/"+pi.name+" exported="+pi.exported+" read="+pi.readPermission+" write="+pi.writePermission);
+   }catch(Throwable e){o("RESOLVE FAIL "+err(e));}
+   for(String p:P)q(Uri.parse("content://"+a+(p.isEmpty()?"":"/"+p)));
+  }
+  o("\n========== END ==========");
+  o("SUCCESS 항목이 있으면 이 로그 전체를 ChatGPT에 보내세요.");
+ }
+ void q(Uri u){
+  Cursor c=null;
+  try{
+   c=getContentResolver().query(u,null,null,null,null);
+   if(c==null){o("NULL "+u);return;}
+   o("SUCCESS "+u+" rows="+c.getCount()+" columns="+Arrays.toString(c.getColumnNames()));
+   int z=0;while(c.moveToNext()&&z<2){
+    StringBuilder b=new StringBuilder("ROW"+z+" ");
+    for(int i=0;i<c.getColumnCount();i++){
+     if(i>0)b.append(" | ");b.append(c.getColumnName(i)).append("=");
+     try{String v=c.getString(i);if(v!=null&&v.length()>120)v=v.substring(0,120)+"...";b.append(v);}catch(Throwable x){b.append("<binary>");}
+    }o(b.toString());z++;
+   }
+  }catch(Throwable e){o("FAIL "+u+" -> "+err(e));}
+  finally{if(c!=null)c.close();}
+ }
+ String err(Throwable e){String s=e.getClass().getSimpleName()+": "+e.getMessage();return s==null?"":s.replace('\n',' ');}
+ void copy(){((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("probe",log.getText()));Toast.makeText(this,"로그 복사 완료",Toast.LENGTH_SHORT).show();}
 }

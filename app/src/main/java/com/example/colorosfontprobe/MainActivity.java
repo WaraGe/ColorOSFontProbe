@@ -90,3 +90,47 @@ public class MainActivity extends Activity {
                 out("provider="+pi.packageName+"/"+pi.name);
                 out("exported="+pi.exported+" readPerm="+pi.readPermission+" writePerm="+pi.writePermission);
             }
+        }catch(Throwable t){out("resolve ERROR "+shortErr(t));}
+
+        for(String path:PATHS){
+            Uri u=Uri.parse("content://"+authority+(path.length()==0?"":"/"+path));
+            query(u);
+        }
+    }
+
+    void query(Uri u){
+        Cursor c=null;
+        try{
+            c=getContentResolver().query(u,null,null,null,null);
+            if(c==null){out("NULL "+u); return;}
+            String[] cols=c.getColumnNames();
+            out("SUCCESS "+u+" rows="+c.getCount()+" columns="+Arrays.toString(cols));
+            int shown=0;
+            while(c.moveToNext() && shown<3){
+                StringBuilder sb=new StringBuilder(" row"+shown+": ");
+                for(int i=0;i<cols.length;i++){
+                    if(i>0)sb.append(" | ");
+                    sb.append(cols[i]).append("=");
+                    try{
+                        String v=c.getString(i);
+                        if(v!=null && v.length()>160)v=v.substring(0,160)+"...";
+                        sb.append(v);
+                    }catch(Throwable x){sb.append("<").append(c.getType(i)).append(">");}
+                }
+                out(sb.toString()); shown++;
+            }
+        }catch(Throwable t){out("FAIL "+u+" -> "+shortErr(t));}
+        finally{if(c!=null)c.close();}
+    }
+
+    String shortErr(Throwable t){
+        String s=t.getClass().getSimpleName()+": "+t.getMessage();
+        return s.replace('\n',' ');
+    }
+
+    void copy(){
+        ClipboardManager cm=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+        cm.setPrimaryClip(ClipData.newPlainText("ColorOS Font Provider Probe",log.getText()));
+        Toast.makeText(this,"로그 복사됨",Toast.LENGTH_SHORT).show();
+    }
+}
